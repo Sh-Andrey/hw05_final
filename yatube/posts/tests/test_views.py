@@ -145,6 +145,7 @@ class PostViewsTests(TestCase):
         self.assertIsInstance(post_form, PostForm)
         self.assertIn('edit', response.context)
         self.assertIs(response.context['edit'], True)
+        self.context_test_expectat(response, is_post=True)
 
     def test_new_post_page_show_correct_context(self):
         response = self.authorized_client.get(reverse('new_post'))
