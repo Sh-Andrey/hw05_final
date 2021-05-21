@@ -68,8 +68,6 @@ class PostsURLTests(TestCase):
             ('profile_unfollow', (username,), f'/{username}/unfollow/'),
             ('add_comment', (username, post_id),
              f'/{username}/{post_id}/comment/'),
-            ('page_not_found', None, '/404/'),
-            ('server_error', None, '/500/'),
         )
 
         for reverse_name, args, url in urls_reverse_name:

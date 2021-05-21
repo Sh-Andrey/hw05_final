@@ -10,9 +10,7 @@
     </div>
 
     <div class="col-md-9">
-      {% for post in page %}
-        {% include "includes/post_item.html" with post=post %}
-      {% endfor %}
+      {% include "includes/post_item.html" with post=post %}
       {% include "includes/comments.html" %}
     </div>
 

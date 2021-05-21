@@ -68,7 +68,6 @@ class PostViewsTests(TestCase):
             ('post', (username, post_id), 'posts/post.html'),
             ('post_edit', (username, post_id), 'posts/new_post.html'),
             ('follow_index', None, 'posts/follow.html'),
-            ('page_not_found', None, 'misc/404.html'),
         )
 
         for reverse_name, args, url in urls_reverse_name:

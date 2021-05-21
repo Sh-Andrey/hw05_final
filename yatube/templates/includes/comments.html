@@ -18,10 +18,10 @@
     <div class="media-body card-body">
       <h5 class="mt-0">
         <a href="{% url 'profile' item.author.username %}">
-          {{ item.post.author.username }}
+          {{ item.author.username }}
         </a>
       </h5>
-      <p>{{ item.text | linebreaksbr }}</p>
+      <p>{{ item.text|linebreaksbr }}</p>
       <small class="text-muted">{{ item.created }}</small>
     </div>
   </div>
