@@ -15,6 +15,7 @@ class PostAdmin(admin.ModelAdmin):
 class GroupAdmin(admin.ModelAdmin):
     list_display = ('title', 'slug', 'description')
     search_fields = ('title', 'slug')
+    prepopulated_fields = {'slug': ('title',)}
 
 
 @admin.register(Comment)

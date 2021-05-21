@@ -75,6 +75,9 @@ class Comment(models.Model):
         'Дата публикации',
         auto_now_add=True)
 
+    class Meta:
+        verbose_name_plural = 'Комментарии'
+
 
 class Follow(models.Model):
     user = models.ForeignKey(
