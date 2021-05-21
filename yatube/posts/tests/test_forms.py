@@ -9,12 +9,12 @@ from django.urls import reverse
 from ..models import Group, Post, User, Comment
 
 
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp(dir=settings.BASE_DIR))
 class PostCreateFormTests(TestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        settings.MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
         cls.group = Group.objects.create(
             title='Тестовый заголовок',
             slug='test_slug',
@@ -31,7 +31,6 @@ class PostCreateFormTests(TestCase):
         super().tearDownClass()
         shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
 
-    @override_settings(MEDIA_ROOT=tempfile.gettempdir())
     def test_create_post(self):
         count = Post.objects.count()
         small_gif = (
@@ -63,7 +62,6 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(post.text, text_test)
         self.assertIsNotNone(post.image.name)
 
-    @override_settings(MEDIA_ROOT=tempfile.gettempdir())
     def test_post_edit_existing_post(self):
         small_gif = (
             b'\x47\x49\x46\x38\x39\x61\x01\x00'
@@ -161,14 +159,15 @@ class PostCreateFormTests(TestCase):
             author=username,
             text='Пост №1'
         )
+        post = Post.objects.count()
         form_data = {
             'text': 'Тестовый текст',
         }
         response = self.authorized_client.post(
-            reverse('add_comment', args=(username, 1)),
+            reverse('add_comment', args=(username, post)),
             data=form_data, follow=True
         )
-        self.assertRedirects(response, reverse('post', args=(username, 1)))
+        self.assertRedirects(response, reverse('post', args=(username, post)))
         self.assertEqual(Comment.objects.count(), count + 1)
 
     def test_guest_client_cannot_create_comment(self):
@@ -178,11 +177,12 @@ class PostCreateFormTests(TestCase):
             author=username,
             text='Пост №1'
         )
+        post = Post.objects.count()
         form_data = {
             'text': 'Тестовый текст',
         }
         self.client.post(
-            reverse('add_comment', args=(username, 1)),
+            reverse('add_comment', args=(username, post)),
             data=form_data, follow=True
         )
         self.assertEqual(Comment.objects.count(), count)

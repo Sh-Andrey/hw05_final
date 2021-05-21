@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 
+from django.core.cache import cache
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
@@ -43,6 +44,7 @@ class PostViewsTests(TestCase):
         )
 
     def setUp(self):
+        cache.clear()
         self.authorized_client = Client()
         self.authorized_client.force_login(PostViewsTests.user)
         self.authorized_client_author = Client()
@@ -90,6 +92,7 @@ class PostViewsTests(TestCase):
         self.assertEqual(post_page.author, PostViewsTests.user)
         self.assertEqual(post_page.group, PostViewsTests.group)
         self.assertEqual(post_page.pub_date, self.post.pub_date)
+        self.assertNotEqual(post_page.image, None)
 
     def test_index_page_show_correct_context(self):
         response = self.client.get(reverse('index'))
@@ -115,6 +118,7 @@ class PostViewsTests(TestCase):
         author = response.context['author']
         self.assertEqual(author, PostViewsTests.post.author)
         self.assertIn('following', response.context)
+        self.assertFalse(response.context['following'])
         self.context_test_expectat(response, is_post=False)
 
     def test_post_view_page_show_correct_context(self):
@@ -130,7 +134,6 @@ class PostViewsTests(TestCase):
         comment_form = response.context['form']
         self.assertIsInstance(comment_form, CommentForm)
         self.assertIn('comments', response.context)
-        self.assertIn('following', response.context)
         self.context_test_expectat(response, is_post=True)
 
     def test_post_edit_page_show_correct_context(self):
@@ -168,15 +171,16 @@ class PostViewsTests(TestCase):
         self.assertEqual(response_context, 0)
 
     def test_index_cache(self):
-        cache = 'Тест кэша'
-        PostViewsTests.post.text = cache
-        PostViewsTests.post.save()
+        cache_page = self.client.get(reverse('index')).content
+        Post.objects.create(
+            text="Тест кэша",
+            author=PostViewsTests.user
+        )
         response = self.client.get(reverse('index'))
-        page = response.context.get('page')[0]
-        self.assertEqual(page.text, cache)
-        PostViewsTests.post.text = 'Тестовый текст'
-        PostViewsTests.post.save()
-        self.assertEqual(page.text, cache)
+        self.assertEqual(cache_page, response.content)
+        cache.clear()
+        response = self.client.get(reverse('index'))
+        self.assertNotEqual(cache_page, response.content)
 
     def test_authorized_user_can_subscribe_other_users(self):
         before = Follow.objects.count()
@@ -185,22 +189,30 @@ class PostViewsTests(TestCase):
         self.authorized_client_author.get(response)
         after = Follow.objects.count()
         self.assertEqual(after, before + 1)
+        follow = Follow.objects.filter(user=PostViewsTests.author,
+                                       author=PostViewsTests.user).exists()
+        self.assertTrue(follow)
 
     def user_can_unsubscribe_from_others(self):
-        username = PostViewsTests.user
-        response = reverse('profile_follow', args=(username,))
-        self.authorized_client_author.get(response)
         before = Follow.objects.count()
-        response = reverse('profile_follow', args=(username,))
+        username = PostViewsTests.user
+        response = reverse('profile_unfollow', args=(username,))
         self.authorized_client_author.get(response)
         after = Follow.objects.count()
         self.assertEqual(after, before - 1)
+        follow = Follow.objects.filter(user=PostViewsTests.author,
+                                       author=PostViewsTests.user).exists()
+        self.assertFalse(follow)
 
     def test_show_follow_posts(self):
         username = PostViewsTests.user
         response = reverse('profile_follow', args=(username,))
         self.authorized_client_author.get(response)
         response = self.authorized_client_author.get(reverse('follow_index'))
-        response_two = self.authorized_client.get(reverse('follow_index'))
-        self.assertFalse(response_two.context['page'])
-        self.assertNotEqual(response.content, response_two.content)
+        page = response.context['page']
+        self.assertIn(PostViewsTests.post, page.object_list)
+
+    def test_dont_show_follow_posts(self):
+        response = self.authorized_client.get(reverse('follow_index'))
+        page = response.context['page']
+        self.assertNotIn(PostViewsTests.post, page.object_list)

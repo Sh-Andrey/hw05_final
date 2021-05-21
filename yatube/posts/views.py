@@ -69,10 +69,8 @@ def profile(request, username):
     user = get_object_or_404(User, username=username)
     posts = user.posts.all()
     page = paginator_pages(request, posts)
-    following = Follow.objects.filter(user__username=request.user,
-                                      author__username=username).exists()
-    followers = user.following.count()
-    follow = user.follower.count()
+    following = Follow.objects.filter(author=user.id,
+                                      user=request.user.id).exists()
     return render(
         request,
         'posts/profile.html',
@@ -80,8 +78,6 @@ def profile(request, username):
             'page': page,
             'author': user,
             'following': following,
-            'followers': followers,
-            'follow': follow,
         }
     )
 
@@ -90,8 +86,6 @@ def post_view(request, username, post_id):
     post = get_object_or_404(Post, author__username=username, id=post_id)
     comments = post.comments.all()
     form = CommentForm()
-    followers = post.author.following.count()
-    follow = post.author.follower.count()
     return render(
         request,
         'posts/post.html',
@@ -100,8 +94,6 @@ def post_view(request, username, post_id):
             'author': post.author,
             'form': form,
             'comments': comments,
-            'followers': followers,
-            'follow': follow,
         }
     )
 
@@ -147,6 +139,7 @@ def add_comment(request, username, post_id):
             'post': post,
         }
     )
+
 
 @login_required
 def follow_index(request):
