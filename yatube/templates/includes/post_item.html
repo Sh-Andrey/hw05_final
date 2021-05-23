@@ -8,10 +8,10 @@
   <div class="card-body">
     <p class="card-text">
       <strong class="d-block text-gray-d ark">
+        {% if post.group %}
+          <a href="{% url 'posts_group' post.group.slug %}">#{{ post.group.title }}</a>
+        {% endif %}
         <a href="{% url 'profile' post.author.username %}">@{{ post.author }}</a>
-          {% if post.group %}
-            <a href="{% url 'posts_group' post.group.slug %}">#{{ post.group.title }}</a>
-          {% endif %}
       </strong>
       {{ post.text|linebreaksbr }}
     </p>
@@ -32,7 +32,7 @@
           </a>
         {% endif %}
       </div>
-      <small class="text-muted">{{ post.pub_date }}</small>
+      <small class="text-muted">{{ post.pub_date|date:"d.m.y" }}</small>
     </div>
   </div>
 </div>
