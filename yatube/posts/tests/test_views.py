@@ -1,3 +1,4 @@
+import sys
 import shutil
 import tempfile
 
@@ -10,8 +11,11 @@ from django.urls import reverse
 from ..models import Group, Post, User, Follow
 from ..forms import PostForm, CommentForm
 
+sys.path.append('/..')
+dir_temp = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp(dir=settings.BASE_DIR))
+
+@override_settings(MEDIA_ROOT=dir_temp)
 class PostViewsTests(TestCase):
 
     @classmethod
@@ -52,8 +56,8 @@ class PostViewsTests(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        shutil.rmtree(dir_temp, ignore_errors=True)
         super().tearDownClass()
-        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
 
     def test_pages_uses_correct_template(self):
         authorized_client = Client()
@@ -92,7 +96,7 @@ class PostViewsTests(TestCase):
         self.assertEqual(post_page.author, PostViewsTests.user)
         self.assertEqual(post_page.group, PostViewsTests.group)
         self.assertEqual(post_page.pub_date, self.post.pub_date)
-        self.assertNotEqual(post_page.image, None)
+        self.assertEqual(post_page.image, self.post.image)
 
     def test_index_page_show_correct_context(self):
         response = self.client.get(reverse('index'))

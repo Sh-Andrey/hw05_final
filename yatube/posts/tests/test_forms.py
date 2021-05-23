@@ -1,3 +1,4 @@
+import sys
 import shutil
 import tempfile
 
@@ -8,8 +9,11 @@ from django.urls import reverse
 
 from ..models import Group, Post, User, Comment
 
+sys.path.append('/..')
+dir_temp = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp(dir=settings.BASE_DIR))
+
+@override_settings(MEDIA_ROOT=dir_temp)
 class PostCreateFormTests(TestCase):
 
     @classmethod
@@ -28,8 +32,8 @@ class PostCreateFormTests(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        shutil.rmtree(dir_temp, ignore_errors=True)
         super().tearDownClass()
-        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
 
     def test_create_post(self):
         count = Post.objects.count()
