@@ -177,7 +177,7 @@ class PostViewsTests(TestCase):
     def test_index_cache(self):
         cache_page = self.client.get(reverse('index')).content
         Post.objects.create(
-            text="Тест кэша",
+            text='Тест кэша',
             author=PostViewsTests.user
         )
         response = self.client.get(reverse('index'))
@@ -230,7 +230,7 @@ class PostViewsTests(TestCase):
         self.assertTrue(response_follow.context['page'][0])
         self.assertEqual(test_text, response_follow.context['page'][0].text)
         response_not_follow = self.authorized_client_author.get(
-            reverse("follow_index")
+            reverse('follow_index')
         )
         self.assertFalse(response_not_follow.context['page'])
 
