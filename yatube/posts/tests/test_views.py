@@ -38,8 +38,8 @@ class PostViewsTests(TestCase):
             slug='test-slug',
             description='test_description',
         )
-        cls.user = User.objects.create(username='TestUser')
-        cls.author = User.objects.create_user(username='TestAuthor')
+        cls.user = User.objects.create_user(username='TestUser')
+        cls.author = User.objects.create(username='TestAuthor')
         cls.post = Post.objects.create(
             group=PostViewsTests.group,
             author=PostViewsTests.user,
@@ -187,34 +187,52 @@ class PostViewsTests(TestCase):
         self.assertNotEqual(cache_page, response.content)
 
     def test_authorized_user_can_subscribe_other_users(self):
-        before = Follow.objects.count()
         username = PostViewsTests.user
+        before = Follow.objects.count()
         response = reverse('profile_follow', args=(username,))
         self.authorized_client_author.get(response)
         after = Follow.objects.count()
         self.assertEqual(after, before + 1)
-        follow = Follow.objects.filter(user=PostViewsTests.author,
-                                       author=PostViewsTests.user).exists()
-        self.assertTrue(follow)
+        follow_user = Follow.objects.filter(
+            user=PostViewsTests.author).exists()
+        follow_author = Follow.objects.filter(
+            author=PostViewsTests.user).exists()
+        self.assertEqual(follow_author, follow_user)
 
-    def user_can_unsubscribe_from_others(self):
-        before = Follow.objects.count()
+    def test_user_can_unsubscribe_from_others(self):
         username = PostViewsTests.user
+        before = Follow.objects.count()
+        Follow.objects.create(
+            user=PostViewsTests.user,
+            author=PostViewsTests.author,
+        )
         response = reverse('profile_unfollow', args=(username,))
         self.authorized_client_author.get(response)
-        after = Follow.objects.count()
-        self.assertEqual(after, before - 1)
-        follow = Follow.objects.filter(user=PostViewsTests.author,
-                                       author=PostViewsTests.user).exists()
-        self.assertFalse(follow)
+        after = Follow.objects.all().count()
+        self.assertEqual(before, after - 1)
+        follow_user = Follow.objects.filter(
+            user=PostViewsTests.author).exists()
+        follow_author = Follow.objects.filter(
+            author=PostViewsTests.user).exists()
+        self.assertEqual(follow_author, follow_user)
 
     def test_show_follow_posts(self):
-        username = PostViewsTests.user
-        response = reverse('profile_follow', args=(username,))
-        self.authorized_client_author.get(response)
-        response = self.authorized_client_author.get(reverse('follow_index'))
-        page = response.context['page']
-        self.assertIn(PostViewsTests.post, page.object_list)
+        test_text = 'Тестовый текст'
+        Follow.objects.create(
+            user=PostViewsTests.user,
+            author=PostViewsTests.author
+        )
+        Post.objects.create(
+            text=test_text,
+            author=PostViewsTests.author,
+        )
+        response_follow = self.authorized_client.get(reverse('follow_index'))
+        self.assertTrue(response_follow.context['page'][0])
+        self.assertEqual(test_text, response_follow.context['page'][0].text)
+        response_not_follow = self.authorized_client_author.get(
+            reverse("follow_index")
+        )
+        self.assertFalse(response_not_follow.context['page'])
 
     def test_dont_show_follow_posts(self):
         response = self.authorized_client.get(reverse('follow_index'))

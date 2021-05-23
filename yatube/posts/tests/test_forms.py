@@ -45,7 +45,7 @@ class PostCreateFormTests(TestCase):
             b'\x02\x4c\x01\x00\x3b\x01\x00\x00'
         )
         uploaded = SimpleUploadedFile(
-            name='small.gif',
+            name='small_test_create.gif',
             content=small_gif,
             content_type='image/gif'
         )
@@ -64,7 +64,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(post.group, PostCreateFormTests.group)
         self.assertEqual(post.author, PostCreateFormTests.user)
         self.assertEqual(post.text, text_test)
-        self.assertIsNotNone(post.image.name)
+        self.assertEqual(post.image, f'posts/{uploaded.name}')
 
     def test_post_edit_existing_post(self):
         small_gif = (
@@ -73,9 +73,12 @@ class PostCreateFormTests(TestCase):
             b'\x01\x0a\x00\x01\x00\x2c\x00\x00'
             b'\x00\x00\x01\x00\x01\x00\x00\x02'
             b'\x02\x4c\x01\x00\x3b\x01\x00\x00'
+            b'\x01\x0a\x00\x01\x00\x2c\x00\x00'
+            b'\x00\x00\x01\x00\x01\x00\x00\x02'
+            b'\x02\x4c\x01\x00\x3b\x01\x00\x00'
         )
         uploaded = SimpleUploadedFile(
-            name='small.gif',
+            name='small_test_edit.gif',
             content=small_gif,
             content_type='image/gif'
         )
@@ -156,37 +159,61 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(post.author, PostCreateFormTests.user)
         self.assertNotEqual(post.text, new_text)
 
-    def test_authorized_client_create_comment(self):
-        username = PostCreateFormTests.user
-        count = Comment.objects.count()
-        Post.objects.create(
-            author=username,
+
+@override_settings(MEDIA_ROOT=dir_temp)
+class CommentCreateFormTest(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.author = User.objects.create_user('TestAuthor')
+        cls.user = User.objects.create_user('TestUser')
+        cls.post = Post.objects.create(
+            author=cls.author,
             text='Пост №1'
         )
-        post = Post.objects.count()
-        form_data = {
+        cls.form_data = {
             'text': 'Тестовый текст',
         }
+
+    def setUp(self):
+        self.authorized_client_author = Client()
+        self.authorized_client_author.force_login(CommentCreateFormTest.author)
+        self.authorized_client = Client()
+        self.authorized_client.force_login(CommentCreateFormTest.user)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(dir_temp, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_authorized_client_create_comment(self):
+        username = CommentCreateFormTest.author
+        post_id = CommentCreateFormTest.post.id
+        count = Comment.objects.count()
+        CommentCreateFormTest.post
         response = self.authorized_client.post(
-            reverse('add_comment', args=(username, post)),
-            data=form_data, follow=True
+            reverse('add_comment', args=(username, post_id)),
+            data=CommentCreateFormTest.form_data, follow=True
         )
-        self.assertRedirects(response, reverse('post', args=(username, post)))
+        self.assertRedirects(response, reverse('post', args=(username,
+                                                             post_id)))
         self.assertEqual(Comment.objects.count(), count + 1)
+        post_response = self.authorized_client.get(
+            reverse('post', args=(username, post_id))
+        )
+        comment = post_response.context['comments']
+        self.assertEqual(comment[0].post, CommentCreateFormTest.post)
+        self.assertEqual(comment[0].author, CommentCreateFormTest.user)
+        self.assertEqual(comment[0].text, self.form_data['text'])
 
     def test_guest_client_cannot_create_comment(self):
-        username = PostCreateFormTests.user
+        username = CommentCreateFormTest.author
+        post_id = CommentCreateFormTest.post.id
         count = Comment.objects.count()
-        Post.objects.create(
-            author=username,
-            text='Пост №1'
-        )
-        post = Post.objects.count()
-        form_data = {
-            'text': 'Тестовый текст',
-        }
+        CommentCreateFormTest.post
         self.client.post(
-            reverse('add_comment', args=(username, post)),
-            data=form_data, follow=True
+            reverse('add_comment', args=(username, post_id)),
+            data=CommentCreateFormTest.form_data, follow=True
         )
         self.assertEqual(Comment.objects.count(), count)
