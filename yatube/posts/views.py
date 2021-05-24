@@ -73,7 +73,7 @@ def profile(request, username):
         following = Follow.objects.filter(author=user,
                                           user=request.user).exists()
     else:
-        following = None
+        following = False
     return render(
         request,
         'posts/profile.html',
@@ -132,7 +132,7 @@ def add_comment(request, username, post_id):
         comment.author = request.user
         comment.post = post
         comment.save()
-        return redirect('post', username=post.author, post_id=post_id)
+    return redirect('post', username=post.author, post_id=post_id)
 
 
 @login_required

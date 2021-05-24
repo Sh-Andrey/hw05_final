@@ -1,4 +1,3 @@
-import sys
 import shutil
 import tempfile
 
@@ -7,9 +6,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..models import Group, Post, User, Comment
+from ..models import Comment, Group, Post, User
 
-sys.path.append('/..')
 dir_temp = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
@@ -109,7 +107,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(post.group, group_second)
         self.assertEqual(post.author, PostCreateFormTests.user)
         self.assertEqual(post.text, edit_text)
-        self.assertIsNotNone(post.image)
+        self.assertEqual(post.image, f'posts/{uploaded.name}')
 
     def test_guest_client_cannot_create_a_new_post(self):
         count = Post.objects.count()
@@ -160,7 +158,6 @@ class PostCreateFormTests(TestCase):
         self.assertNotEqual(post.text, new_text)
 
 
-@override_settings(MEDIA_ROOT=dir_temp)
 class CommentCreateFormTest(TestCase):
 
     @classmethod
@@ -172,48 +169,40 @@ class CommentCreateFormTest(TestCase):
             author=cls.author,
             text='Пост №1'
         )
-        cls.form_data = {
-            'text': 'Тестовый текст',
-        }
 
     def setUp(self):
-        self.authorized_client_author = Client()
-        self.authorized_client_author.force_login(CommentCreateFormTest.author)
         self.authorized_client = Client()
         self.authorized_client.force_login(CommentCreateFormTest.user)
-
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(dir_temp, ignore_errors=True)
-        super().tearDownClass()
 
     def test_authorized_client_create_comment(self):
         username = CommentCreateFormTest.author
         post_id = CommentCreateFormTest.post.id
         count = Comment.objects.count()
-        CommentCreateFormTest.post
+        form_data = {
+            'text': 'Тестовый текст',
+        }
         response = self.authorized_client.post(
             reverse('add_comment', args=(username, post_id)),
-            data=CommentCreateFormTest.form_data, follow=True
+            data=form_data, follow=True
         )
         self.assertRedirects(response, reverse('post', args=(username,
                                                              post_id)))
         self.assertEqual(Comment.objects.count(), count + 1)
-        post_response = self.authorized_client.get(
-            reverse('post', args=(username, post_id))
-        )
-        comment = post_response.context['comments']
-        self.assertEqual(comment[0].post, CommentCreateFormTest.post)
-        self.assertEqual(comment[0].author, CommentCreateFormTest.user)
-        self.assertEqual(comment[0].text, self.form_data['text'])
+        self.authorized_client.get(reverse('post', args=(username, post_id)))
+        comment = Comment.objects.first()
+        self.assertEqual(comment.post, CommentCreateFormTest.post)
+        self.assertEqual(comment.author, CommentCreateFormTest.user)
+        self.assertEqual(comment.text, form_data['text'])
 
     def test_guest_client_cannot_create_comment(self):
         username = CommentCreateFormTest.author
         post_id = CommentCreateFormTest.post.id
         count = Comment.objects.count()
-        CommentCreateFormTest.post
+        form_data = {
+            'text': 'Тестовый текст',
+        }
         self.client.post(
             reverse('add_comment', args=(username, post_id)),
-            data=CommentCreateFormTest.form_data, follow=True
+            data=form_data, follow=True
         )
         self.assertEqual(Comment.objects.count(), count)

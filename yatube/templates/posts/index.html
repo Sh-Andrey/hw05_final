@@ -6,7 +6,7 @@
   {% include "includes/menu.html" with index=True %}
 
   {% load cache %}
-    {% cache 20 index_page page %}
+  {% cache 20 index_page page %}
     {% for post in page %}
       {% include "includes/post_item.html" with post=post %}
     {% endfor %}
