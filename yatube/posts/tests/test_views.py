@@ -210,7 +210,6 @@ class PostViewsTests(TestCase):
         followers_delete = Follow.objects.count()
         self.assertEqual(before, followers_delete)
 
-
     def test_show_follow_posts(self):
         Follow.objects.create(
             user=PostViewsTests.user,
@@ -222,7 +221,7 @@ class PostViewsTests(TestCase):
             group=PostViewsTests.group
         )
         response = self.authorized_client.get(reverse('follow_index'))
-        page =response.context['page'][0]
+        page = response.context['page'][0]
         self.assertContains(response, PostViewsTests.post.text)
         self.assertContains(response, PostViewsTests.post.group)
         self.assertContains(response, PostViewsTests.user)
