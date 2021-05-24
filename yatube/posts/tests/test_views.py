@@ -10,7 +10,6 @@ from django.urls import reverse
 from ..forms import CommentForm, PostForm
 from ..models import Follow, Group, Post, User
 
-
 dir_temp = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
