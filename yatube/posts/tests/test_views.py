@@ -191,19 +191,14 @@ class PostViewsTests(TestCase):
         self.authorized_client_author.get(response)
         after = Follow.objects.count()
         self.assertEqual(after, before + 1)
-        response = self.authorized_client_author.get(reverse('follow_index'))
-        self.context_test_expectat(response, is_post=False)
+        object_follow = Follow.objects.first()
+        self.assertEqual(object_follow.user, PostViewsTests.author)
+        self.assertEqual(object_follow.author, PostViewsTests.user)
 
     def test_user_can_unsubscribe_from_others(self):
         author = PostViewsTests.author
         before = Follow.objects.count()
-        Follow.objects.create(
-            user=PostViewsTests.user,
-            author=PostViewsTests.author
-        )
         self.authorized_client.post(reverse('profile_follow', args=(author,)))
-        after = Follow.objects.count()
-        self.assertEqual(after, before + 1)
         self.authorized_client.post(
             reverse('profile_unfollow', args=(author,)))
         followers_delete = Follow.objects.count()
@@ -220,18 +215,19 @@ class PostViewsTests(TestCase):
             group=PostViewsTests.group
         )
         response = self.authorized_client.get(reverse('follow_index'))
-        page = response.context['page'][0]
-        self.assertContains(response, PostViewsTests.post.text)
-        self.assertContains(response, PostViewsTests.post.group)
-        self.assertContains(response, PostViewsTests.user)
-        self.assertEqual(page.text, PostViewsTests.post.text)
-        self.assertEqual(page.author, PostViewsTests.author)
-        self.assertEqual(page.group, PostViewsTests.post.group)
+        post_context = response.context['post']
+        self.assertEqual(post_context.text, PostViewsTests.post.text)
+        self.assertEqual(post_context.author, PostViewsTests.author)
+        self.assertEqual(post_context.group, PostViewsTests.post.group)
 
     def test_dont_show_follow_posts(self):
-        response = self.authorized_client_author.get(reverse('follow_index'))
-        page = response.context['page']
-        self.assertNotIn(PostViewsTests.post, page.object_list)
-        self.assertNotContains(response, PostViewsTests.post.text)
-        self.assertNotContains(response, PostViewsTests.post.group)
-        self.assertNotContains(response, PostViewsTests.user)
+        new_user = User.objects.create(username='NewUser')
+        Post.objects.create(
+            text=PostViewsTests.post.text,
+            author=new_user,
+            group=PostViewsTests.group
+        )
+        before = Follow.objects.count()
+        self.authorized_client_author.get(reverse('follow_index'))
+        after = Follow.objects.count()
+        self.assertEqual(before, after)

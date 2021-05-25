@@ -188,7 +188,6 @@ class CommentCreateFormTest(TestCase):
         self.assertRedirects(response, reverse('post', args=(username,
                                                              post_id)))
         self.assertEqual(Comment.objects.count(), count + 1)
-        self.authorized_client.get(reverse('post', args=(username, post_id)))
         comment = Comment.objects.first()
         self.assertEqual(comment.post, CommentCreateFormTest.post)
         self.assertEqual(comment.author, CommentCreateFormTest.user)
