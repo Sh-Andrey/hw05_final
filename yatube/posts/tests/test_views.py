@@ -185,20 +185,22 @@ class PostViewsTests(TestCase):
         self.assertNotEqual(cache_page, response.content)
 
     def test_authorized_user_can_subscribe_other_users(self):
-        username = PostViewsTests.user
+        author = PostViewsTests.author
         before = Follow.objects.count()
-        response = reverse('profile_follow', args=(username,))
-        self.authorized_client_author.get(response)
+        self.authorized_client.get(reverse('profile_follow', args=(author,)))
         after = Follow.objects.count()
         self.assertEqual(after, before + 1)
         object_follow = Follow.objects.first()
-        self.assertEqual(object_follow.user, PostViewsTests.author)
-        self.assertEqual(object_follow.author, PostViewsTests.user)
+        self.assertEqual(object_follow.user, PostViewsTests.user)
+        self.assertEqual(object_follow.author, PostViewsTests.author)
 
     def test_user_can_unsubscribe_from_others(self):
         author = PostViewsTests.author
         before = Follow.objects.count()
-        self.authorized_client.post(reverse('profile_follow', args=(author,)))
+        Follow.objects.create(
+            user=PostViewsTests.user,
+            author=PostViewsTests.author
+        )
         self.authorized_client.post(
             reverse('profile_unfollow', args=(author,)))
         followers_delete = Follow.objects.count()
@@ -227,7 +229,6 @@ class PostViewsTests(TestCase):
             author=new_user,
             group=PostViewsTests.group
         )
-        before = Follow.objects.count()
-        self.authorized_client_author.get(reverse('follow_index'))
-        after = Follow.objects.count()
-        self.assertEqual(before, after)
+        response = self.authorized_client_author.get(reverse('follow_index'))
+        response_context = response.context['page'].object_list.count()
+        self.assertEqual(response_context, 0)
